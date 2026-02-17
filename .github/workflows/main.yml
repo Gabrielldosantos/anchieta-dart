@@ -29,23 +29,21 @@ jobs:
       - name: Run Tests
         working-directory: ./aluno_code
         run: |
-          dart pub get
-          # Gerando o JSON e garantindo que o arquivo exista
-          dart test -r json > machine_results.json || true
+          flutter test --machine > machine_results.json || true
 
       - name: Show Summary
         working-directory: ./aluno_code
         run: |
-          # 1. Filtramos apenas os eventos de conclusão (testDone)
-          # 2. Pegamos apenas os que NÃO são ocultos ("hidden":false)
+          # 1. No Flutter --machine, cada teste finalizado gera um evento 'testDone'
+          # Filtramos apenas as conclusões de testes reais (escondendo os de carregamento)
           grep '"type":"testDone"' machine_results.json | grep '"hidden":false' > filtered_results.txt || true
 
-          # 3. Contagem dos resultados baseada no seu arquivo real
+          # 2. Contagem dos resultados
           P=$(grep -c '"result":"success"' filtered_results.txt || echo 0)
           F=$(grep -c '"result":"failure"' filtered_results.txt || echo 0)
           E=$(grep -c '"result":"error"' filtered_results.txt || echo 0)
 
-          # 4. Tratamento de variáveis para o Shell do Linux
+          # 3. Garantia de valores numéricos
           P=${P:-0}
           F=${F:-0}
           E=${E:-0}
@@ -54,14 +52,13 @@ jobs:
           TOTAL=$((P + REPROVADOS))
 
           echo "------------------------------------------"
-          echo "RESULTADOS FINAIS (Filtro Anti-Loading)"
+          echo "RESUMO COM FLUTTER TEST"
           echo "------------------------------------------"
           echo "Total de exercícios: $TOTAL"
           echo "Passou: $P"
           echo "Falhou: $REPROVADOS"
           echo "------------------------------------------"
 
-          # 5. Se houver falha, o GitHub Actions marca como erro (X vermelho)
           if [ "$REPROVADOS" -gt 0 ]; then
             echo "Status: REPROVADO"
             exit 1
